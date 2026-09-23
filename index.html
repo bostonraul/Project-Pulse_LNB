@@ -30,10 +30,10 @@
       --critical: #d98f8f; --critical-soft: #2a1717;
     }
   }
-  html, body { height: 100%; }
+  html { height: 100%; }
   * { box-sizing: border-box; }
   body {
-    margin: 0; background: var(--canvas); color: var(--ink);
+    margin: 0; min-height: 100%; background: var(--canvas); color: var(--ink);
     font-family: 'Archivo', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     font-feature-settings: "tnum" 1;
@@ -48,7 +48,7 @@
   }
   .brand { display: flex; align-items: center; gap: 12px; }
   .brand .mark svg { display: block; }
-  .brand-text h1 { font-family: 'Archivo Expanded','Archivo',sans-serif; font-size: 19px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+  .brand-text h1 { font-family: 'Archivo',sans-serif; font-size: 19px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
   .brand-text .sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
   .top-actions { display: flex; gap: 10px; align-items: center; }
   .who { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-soft); padding: 5px 12px 5px 5px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
@@ -87,8 +87,8 @@
   .section-head .desc { font-size: 12px; color: var(--muted); }
   .section-head .cnt { font-size: 12px; color: var(--faint); margin-left: auto; }
 
-  .tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 12px; }
-  .tile { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 16px 14px 18px; cursor: pointer; text-align: left; box-shadow: var(--shadow-1); transition: all .12s ease; display: flex; flex-direction: column; gap: 10px; min-height: 128px; }
+  .tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+  .tile { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 16px 14px 18px; cursor: pointer; text-align: left; box-shadow: var(--shadow-1); transition: all .12s ease; display: flex; flex-direction: column; gap: 10px; min-height: 168px; }
   .tile::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 2px; background: var(--tile-stripe, var(--line-strong)); }
   .tile:hover { border-color: var(--line-strong); box-shadow: var(--shadow-2); transform: translateY(-1px); }
   .tile-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
@@ -103,6 +103,7 @@
   .stage-track .seg { width: 14px; height: 4px; border-radius: 2px; background: var(--line-strong); }
   .stage-track .seg.on { background: var(--track-fill, var(--ink)); }
   .stage-track .lbl { font-size: 11.5px; color: var(--ink-soft); font-weight: 600; }
+  .tile-purpose { font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .tile-owner { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--line); }
   .tile-owner .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--faint); }
 
@@ -376,8 +377,10 @@ const LOCAL_TOKEN_KEY = "pp_local_token";
     var segs = STAGES.map(function(s,i){ return '<div class="seg'+(i<=stageIdx?' on':'')+'"></div>'; }).join('');
     var tag = ap.c ? '<span class="tag '+ap.c+'">'+escapeHtml(ap.label)+'</span>' : '';
     var ownerName = p.ownerLabel || (p.ownerEmail || 'Unassigned owner');
+    var purpose = p.purpose ? '<div class="tile-purpose">'+escapeHtml(p.purpose)+'</div>' : '';
     return '<button type="button" class="tile" data-id="'+escapeHtml(p.id)+'" style="--tile-stripe:'+stripeVar+';">'+
       '<div class="tile-top"><div class="tile-name">'+escapeHtml(p.name||'Untitled project')+'</div>'+tag+'</div>'+
+      purpose+
       '<div class="stage-track" style="--track-fill:'+fillVar+';"><div class="segs">'+segs+'</div><div class="lbl" style="color:'+fillVar+';">'+escapeHtml(st.label)+'</div></div>'+
       '<div class="tile-owner"><span class="dot"></span><span>'+escapeHtml(ownerName)+'</span></div>'+
     '</button>';
@@ -656,9 +659,7 @@ const LOCAL_TOKEN_KEY = "pp_local_token";
       els.signOutBtn.style.display = 'none';
       els.addBtn.style.display = 'none';
       els.roBanner.style.display = 'block';
-      els.roBanner.textContent = USE_FIREBASE
-        ? "You're viewing without signing in. Sign in with Google if you're a project owner or admin so you can edit."
-        : "You're viewing without signing in. Sign in as rsivarajan1234@gmail.com to create and edit projects.";
+      els.roBanner.textContent = "Anyone with this link can view every project. Sign in only if you need to create or edit.";
       return;
     }
     if (currentUser.avatarUrl) {
@@ -667,16 +668,15 @@ const LOCAL_TOKEN_KEY = "pp_local_token";
     }
     var span = document.createElement('span'); span.textContent = currentUser.name || currentUser.email;
     els.whoBox.appendChild(span);
-    if (isAdmin) {
-      var tag = document.createElement('span'); tag.className='role-tag'; tag.textContent='Admin';
-      els.whoBox.appendChild(tag);
-    }
+    var tag = document.createElement('span'); tag.className='role-tag';
+    tag.textContent = isAdmin ? 'Admin' : 'Viewer';
+    els.whoBox.appendChild(tag);
     els.signInBtn.style.display = 'none';
     els.signOutBtn.style.display = 'inline-block';
     els.addBtn.style.display = isAdmin ? 'inline-block' : 'none';
     if (!isAdmin) {
       els.roBanner.style.display = 'block';
-      els.roBanner.textContent = "You can view every project here. If you're an owner on one, open its card to fill in or update the details — everyone else sees it update live.";
+      els.roBanner.textContent = "You're signed in as a viewer. Every project is visible here. Only the admin or an assigned owner can edit.";
     } else {
       els.roBanner.style.display = 'none';
     }
