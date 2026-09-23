@@ -1,0 +1,42 @@
+rules_version = '2';
+
+// Keep this ADMIN_EMAILS list identical to the one in index.html.
+// This is the file that actually enforces permissions — the JS in
+// index.html only uses its own copy to decide what buttons to show.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email in [
+        "you@yourcompany.com"
+      ];
+    }
+
+    function isOwner(data) {
+      return isSignedIn()
+        && data.ownerEmail != null
+        && request.auth.token.email.lower() == data.ownerEmail.lower();
+    }
+
+    match /projects/{projectId} {
+      // Anyone can view the board, signed in or not.
+      allow read: if true;
+
+      // Only admins create or delete projects.
+      allow create: if isAdmin();
+      allow delete: if isAdmin();
+
+      // Admins can edit any project; an owner can edit only their own.
+      allow update: if isAdmin() || isOwner(resource.data);
+    }
+
+    // Deny everything else by default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

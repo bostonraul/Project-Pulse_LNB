@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Project Pulse — Portfolio Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Expanded:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #14171c; --ink-soft: #3c4149; --muted: #6b7178; --faint: #9aa0a6;
+    --line: #e2e4e2; --line-strong: #c9ccc8; --canvas: #f6f6f4; --surface: #ffffff; --surface-raised: #fbfbfa;
+    --accent: #1f6e52; --accent-ink: #0e4432; --accent-soft: #e7f0ea;
+    --gold: #96691b; --gold-soft: #f5eee0;
+    --indigo: #2e4374; --indigo-soft: #e9edf5;
+    --plum: #63395f; --plum-soft: #f2e8f0;
+    --critical: #8c2f2f; --critical-soft: #f6e7e6;
+    --shadow-1: 0 1px 2px rgba(20,23,28,0.04);
+    --shadow-2: 0 2px 6px rgba(20,23,28,0.06), 0 10px 24px rgba(20,23,28,0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #eceeec; --ink-soft: #c7ccc9; --muted: #9aa19d; --faint: #6b716e;
+      --line: #2a2d2b; --line-strong: #3a3e3b; --canvas: #101211; --surface: #171917; --surface-raised: #1c1e1c;
+      --accent: #4fa080; --accent-ink: #bfe3d2; --accent-soft: #16241d;
+      --gold: #cfa54f; --gold-soft: #2b2415;
+      --indigo: #8fa4d6; --indigo-soft: #1a2233;
+      --plum: #c191bd; --plum-soft: #241b23;
+      --critical: #d98f8f; --critical-soft: #2a1717;
+    }
+  }
+  html, body { height: 100%; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--canvas); color: var(--ink);
+    font-family: 'Archivo', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "tnum" 1;
+  }
+  .num { font-variant-numeric: tabular-nums; }
+  .wrap { max-width: 1360px; margin: 0 auto; padding: 0 28px 64px; }
+
+  header.top {
+    padding: 22px 0 18px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand .mark svg { display: block; }
+  .brand-text h1 { font-family: 'Archivo Expanded','Archivo',sans-serif; font-size: 19px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+  .brand-text .sub { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .top-actions { display: flex; gap: 10px; align-items: center; }
+  .who { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-soft); padding: 5px 12px 5px 5px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+  .who img { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line); }
+  .who .role-tag { font-size: 10.5px; font-weight: 600; color: var(--accent-ink); background: var(--accent-soft); padding: 2px 7px; border-radius: 4px; margin-left: 2px; }
+
+  button { font: inherit; cursor: pointer; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); padding: 9px 16px; font-size: 13px; font-weight: 600; transition: all .12s ease; }
+  button:hover { border-color: var(--ink-soft); }
+  button.primary { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+  button.primary:hover { background: var(--accent-ink); border-color: var(--accent-ink); }
+  button.ghost { background: transparent; border-color: transparent; color: var(--muted); padding: 6px 8px; }
+  button.ghost:hover { color: var(--critical); background: var(--critical-soft); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+
+  .kpi-strip { display: flex; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); margin-bottom: 26px; overflow: hidden; box-shadow: var(--shadow-1); flex-wrap: wrap; }
+  .kpi { flex: 1; min-width: 140px; padding: 16px 22px; border-right: 1px solid var(--line); cursor: pointer; transition: background .12s ease; }
+  .kpi:last-child { border-right: none; }
+  .kpi:hover { background: var(--surface-raised); }
+  .kpi .n { font-size: 26px; font-weight: 700; line-height: 1; }
+  .kpi .l { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .kpi.flag-gold .n { color: var(--gold); } .kpi.flag-indigo .n { color: var(--indigo); } .kpi.flag-plum .n { color: var(--plum); }
+
+  .controls-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin-bottom: 22px; }
+  .segmented { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; }
+  .segmented button { border: none; border-radius: 0; background: var(--surface); color: var(--muted); padding: 8px 15px; font-size: 12.5px; border-right: 1px solid var(--line-strong); }
+  .segmented button:last-child { border-right: none; }
+  .segmented button.active { background: var(--ink); color: var(--surface); }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-left: auto; }
+  .filters input[type=text] { font: inherit; font-size: 13px; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); min-width: 220px; }
+  .count-note { font-size: 12px; color: var(--faint); }
+
+  .section { margin-bottom: 34px; }
+  .section-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+  .section-head .swatch { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+  .section-head h3 { margin: 0; font-size: 14.5px; font-weight: 700; }
+  .section-head .desc { font-size: 12px; color: var(--muted); }
+  .section-head .cnt { font-size: 12px; color: var(--faint); margin-left: auto; }
+
+  .tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 12px; }
+  .tile { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px 16px 14px 18px; cursor: pointer; text-align: left; box-shadow: var(--shadow-1); transition: all .12s ease; display: flex; flex-direction: column; gap: 10px; min-height: 128px; }
+  .tile::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 2px; background: var(--tile-stripe, var(--line-strong)); }
+  .tile:hover { border-color: var(--line-strong); box-shadow: var(--shadow-2); transform: translateY(-1px); }
+  .tile-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .tile-name { font-size: 14.5px; font-weight: 700; line-height: 1.32; }
+  .tag { font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 4px; white-space: nowrap; border: 1px solid transparent; flex-shrink: 0; }
+  .tag.gold { color: var(--gold); background: var(--gold-soft); }
+  .tag.indigo { color: var(--indigo); background: var(--indigo-soft); }
+  .tag.plum { color: var(--plum); background: var(--plum-soft); }
+  .tag.neutral { color: var(--muted); background: var(--surface-raised); border-color: var(--line); }
+  .stage-track { display: flex; align-items: center; gap: 10px; }
+  .stage-track .segs { display: flex; gap: 3px; }
+  .stage-track .seg { width: 14px; height: 4px; border-radius: 2px; background: var(--line-strong); }
+  .stage-track .seg.on { background: var(--track-fill, var(--ink)); }
+  .stage-track .lbl { font-size: 11.5px; color: var(--ink-soft); font-weight: 600; }
+  .tile-owner { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--line); }
+  .tile-owner .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--faint); }
+
+  .empty-grid, .empty-col { font-size: 12.5px; color: var(--muted); text-align: center; padding: 22px; border: 1px dashed var(--line-strong); border-radius: 8px; background: var(--surface-raised); }
+  .empty-state { text-align: center; padding: 80px 20px; }
+  .empty-state h2 { font-size: 17px; margin-bottom: 8px; }
+  .empty-state p { font-size: 13px; color: var(--muted); max-width: 420px; margin: 0 auto 20px; line-height: 1.5; }
+  .ro-banner { font-size: 12.5px; color: var(--ink-soft); background: var(--surface-raised); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin-bottom: 20px; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(15,17,15,0.5); display: none; align-items: flex-start; justify-content: center; z-index: 50; padding: 48px 16px; overflow-y: auto; }
+  .overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; width: 100%; max-width: 560px; padding: 26px 26px 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.22); }
+  .modal-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+  .modal h2 { margin: 0; font-size: 18px; font-weight: 700; }
+  .modal .modal-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 20px; }
+  .close-x { background: none; border: none; font-size: 15px; color: var(--faint); padding: 4px 6px; }
+  .view-block { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+  .view-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .view-block .k { font-size: 11px; color: var(--faint); font-weight: 600; margin-bottom: 5px; }
+  .view-block .v { font-size: 14px; line-height: 1.55; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 12.5px; font-weight: 700; margin-bottom: 5px; }
+  .field .hint { font-size: 11.5px; color: var(--muted); margin-bottom: 7px; line-height: 1.4; }
+  .field input[type=text], .field input[type=email], .field textarea { width: 100%; font: inherit; font-size: 13.5px; padding: 10px 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); }
+  .field input:focus, .field textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .field textarea { resize: vertical; min-height: 56px; }
+  .opt-list { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .opt-row { display: flex; align-items: flex-start; gap: 11px; padding: 11px 13px; cursor: pointer; border-bottom: 1px solid var(--line); position: relative; }
+  .opt-row:last-child { border-bottom: none; }
+  .opt-row:hover, .opt-row.selected { background: var(--surface-raised); }
+  .opt-row.selected::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--ink); }
+  .opt-row input { margin-top: 4px; accent-color: var(--ink); }
+  .opt-row .swatch { width: 8px; height: 8px; border-radius: 2px; margin-top: 5px; flex-shrink: 0; }
+  .opt-row .ot { font-size: 13px; font-weight: 700; }
+  .opt-row .od { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .modal-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; gap: 8px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .modal-actions .right { display: flex; gap: 8px; }
+  .signin-note { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  ::-webkit-scrollbar { height: 8px; width: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="mark">
+        <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0.5" y="0.5" width="29" height="29" rx="5.5" fill="var(--ink)"/>
+          <rect x="7" y="17" width="3.4" height="6" rx="0.6" fill="var(--surface)"/>
+          <rect x="13.3" y="11" width="3.4" height="12" rx="0.6" fill="var(--surface)"/>
+          <rect x="19.6" y="7" width="3.4" height="16" rx="0.6" fill="var(--accent)"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1>Project Pulse</h1>
+        <div class="sub">Portfolio &amp; stakeholder actions</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <div class="who" id="whoBox"><span id="whoLabel">Loading…</span></div>
+      <button id="signInBtn" style="display:none;">Sign in with Google</button>
+      <button id="signOutBtn" class="ghost" style="display:none;">Sign out</button>
+      <button class="primary" id="addBtn" style="display:none;">New project</button>
+    </div>
+  </header>
+
+  <div id="roBanner" class="ro-banner" style="display:none;"></div>
+  <div class="kpi-strip" id="kpiStrip"></div>
+
+  <div class="controls-row">
+    <div class="segmented" id="viewSwitch">
+      <button data-view="grid" class="active">All projects</button>
+      <button data-view="stage">By stage</button>
+      <button data-view="approval">By approval needed</button>
+    </div>
+    <div class="filters">
+      <input type="text" id="searchInput" placeholder="Search project, owner or person" />
+      <span class="count-note" id="countNote"></span>
+    </div>
+  </div>
+
+  <div id="content"></div>
+  <div class="empty-state" id="emptyState" style="display:none;">
+    <h2>No projects yet</h2>
+    <p>Once an admin adds a project and assigns an owner's email, it appears here as a card — the owner can sign in with that email to fill in the details themselves.</p>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-top">
+      <div><h2 id="modalTitle">Project</h2><div class="modal-sub" id="modalSub">&nbsp;</div></div>
+      <button class="close-x" id="closeX">Close</button>
+    </div>
+    <div id="viewMode"></div>
+    <form id="projectForm" style="display:none;">
+      <div class="field">
+        <label>Project name</label>
+        <input type="text" id="f_name" required maxlength="120" placeholder="e.g. Q4 Billing Migration" />
+      </div>
+      <div class="field">
+        <label>Owner name</label>
+        <div class="hint">Shown on the card.</div>
+        <input type="text" id="f_ownerLabel" maxlength="80" placeholder="e.g. Rohan Mehta" />
+      </div>
+      <div class="field" id="ownerAssignField" style="display:none;">
+        <label>Owner's email <span style="font-weight:400;color:var(--muted);">— optional</span></label>
+        <div class="hint">When this person signs in with this exact Google email, they get edit rights on this project. Leave blank and only admins can edit it.</div>
+        <input type="email" id="ownerEmailInput" placeholder="name@company.com" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label>What is this project?</label>
+        <textarea id="f_purpose" maxlength="300" placeholder="Plain-language purpose — what problem does it solve, or what's the goal?"></textarea>
+      </div>
+      <div class="field">
+        <label>Stage</label>
+        <div class="hint">Where things stand today.</div>
+        <div class="opt-list" id="stageOptions"></div>
+      </div>
+      <div class="field">
+        <label>Stakeholder action needed</label>
+        <div class="hint">What, if anything, this project needs from stakeholders right now.</div>
+        <div class="opt-list" id="approvalOptions"></div>
+      </div>
+      <div class="field">
+        <label>Who's involved</label>
+        <div class="hint">Names of people working on this, comma separated.</div>
+        <input type="text" id="f_people" maxlength="200" placeholder="e.g. Amit, Priya, Rahul" />
+      </div>
+      <div class="modal-actions">
+        <div class="left"><button type="button" id="deleteBtn" class="ghost" style="display:none;">Delete project</button></div>
+        <div class="right">
+          <button type="button" id="cancelBtn">Cancel</button>
+          <button type="submit" class="primary" id="saveBtn">Save</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script type="module">
+// =====================================================================
+// 1) PASTE YOUR OWN FIREBASE PROJECT CONFIG HERE.
+//    Firebase console → Project settings → General → Your apps → SDK setup and configuration.
+// =====================================================================
+const firebaseConfig = {
+  apiKey: "PASTE_YOUR_API_KEY",
+  authDomain: "PASTE_YOUR_PROJECT.firebaseapp.com",
+  projectId: "PASTE_YOUR_PROJECT_ID",
+  storageBucket: "PASTE_YOUR_PROJECT.appspot.com",
+  messagingSenderId: "PASTE_YOUR_SENDER_ID",
+  appId: "PASTE_YOUR_APP_ID"
+};
+
+// =====================================================================
+// 2) LIST THE EMAIL ADDRESSES THAT SHOULD BE ADMINS (full control).
+//    This is a UI convenience only — the real enforcement lives in
+//    firestore.rules, which you must edit to match this same list.
+// =====================================================================
+const ADMIN_EMAILS = [
+  "you@yourcompany.com"
+];
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc,
+  onSnapshot, serverTimestamp, deleteField
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const dbf = getFirestore(app);
+
+(function(){
+  "use strict";
+
+  var STAGES = [
+    { key: 'idea',        label: 'Idea',        desc: "Just an idea — exploring if it's worth doing", tone: 'neutral' },
+    { key: 'planning',    label: 'Planning',    desc: "Defining scope, approach and who's needed", tone: 'neutral' },
+    { key: 'in_progress', label: 'In progress', desc: 'Actively being worked on', tone: 'neutral' },
+    { key: 'review',      label: 'In review',   desc: 'Being tested or reviewed before it ships', tone: 'neutral' },
+    { key: 'blocked',     label: 'Blocked',     desc: 'Stuck — needs help to move forward', tone: 'critical' },
+    { key: 'done',        label: 'Done',        desc: 'Completed and delivered', tone: 'success' }
+  ];
+  var APPROVALS = [
+    { key: 'none',            label: 'No action needed', desc: 'Nothing required from stakeholders right now', c: null },
+    { key: 'budget',          label: 'Budget approval',  desc: 'Needs sign-off on spend before moving ahead', c: 'gold' },
+    { key: 'ideation',        label: 'Ideation input',   desc: 'Needs brainstorming or direction from stakeholders', c: 'indigo' },
+    { key: 'business_review', label: 'Business review',  desc: 'Needs a leadership / business review', c: 'plum' }
+  ];
+  function stageInfo(k){ return STAGES.find(function(s){ return s.key === k; }) || STAGES[0]; }
+  function approvalInfo(k){ return APPROVALS.find(function(a){ return a.key === k; }) || APPROVALS[0]; }
+  function toneVar(tone){ if (tone==='critical') return 'var(--critical)'; if (tone==='success') return 'var(--accent)'; return 'var(--ink)'; }
+
+  var els = {};
+  ['addBtn','whoBox','whoLabel','roBanner','kpiStrip','viewSwitch','searchInput','countNote','content','emptyState',
+   'overlay','modalTitle','modalSub','closeX','viewMode','projectForm','ownerAssignField','ownerEmailInput',
+   'f_name','f_ownerLabel','f_purpose','stageOptions','approvalOptions','f_people','deleteBtn','cancelBtn','saveBtn',
+   'signInBtn','signOutBtn'
+  ].forEach(function(id){ els[id] = document.getElementById(id); });
+
+  var allProjects = [];
+  var currentUser = null;   // { uid, email, name, avatarUrl } | null
+  var isAdmin = false;
+  var viewMode = 'grid';
+  var editingId = null, creatingNew = false;
+  var formStage = 'idea', formApproval = 'none';
+
+  function escapeHtml(str){ var d=document.createElement('div'); d.textContent = str==null?'':String(str); return d.innerHTML; }
+  function peopleArray(str){ if(!str) return []; return str.split(',').map(function(s){return s.trim();}).filter(Boolean); }
+  function canEditProject(p){
+    if (isAdmin) return true;
+    if (!currentUser) return false;
+    return !!p.ownerEmail && p.ownerEmail.toLowerCase() === currentUser.email.toLowerCase();
+  }
+
+  function renderKpis(list){
+    var counts = { budget:0, ideation:0, business_review:0 };
+    list.forEach(function(p){ if (counts[p.approval]!==undefined) counts[p.approval]++; });
+    var cards = [
+      { key:'total', cls:'', n:list.length, l:'Total projects' },
+      { key:'budget', cls:'flag-gold', n:counts.budget, l:'Need budget approval' },
+      { key:'ideation', cls:'flag-indigo', n:counts.ideation, l:'Need ideation input' },
+      { key:'business_review', cls:'flag-plum', n:counts.business_review, l:'Need business review' }
+    ];
+    els.kpiStrip.innerHTML = cards.map(function(c){
+      return '<div class="kpi '+c.cls+'" data-jump="'+c.key+'"><div class="n num">'+c.n+'</div><div class="l">'+escapeHtml(c.l)+'</div></div>';
+    }).join('');
+    Array.prototype.forEach.call(els.kpiStrip.querySelectorAll('.kpi'), function(card){
+      card.addEventListener('click', function(){
+        var jump = card.getAttribute('data-jump');
+        if (jump==='total') { setView('grid'); return; }
+        setView('approval');
+      });
+    });
+  }
+
+  function tileHtml(p){
+    var st = stageInfo(p.stage), ap = approvalInfo(p.approval);
+    var stageIdx = STAGES.findIndex(function(s){return s.key===st.key;});
+    var fillVar = toneVar(st.tone);
+    var stripeVar = st.tone==='neutral' ? 'var(--line-strong)' : fillVar;
+    var segs = STAGES.map(function(s,i){ return '<div class="seg'+(i<=stageIdx?' on':'')+'"></div>'; }).join('');
+    var tag = ap.c ? '<span class="tag '+ap.c+'">'+escapeHtml(ap.label)+'</span>' : '';
+    var ownerName = p.ownerLabel || (p.ownerEmail || 'Unassigned owner');
+    return '<button type="button" class="tile" data-id="'+escapeHtml(p.id)+'" style="--tile-stripe:'+stripeVar+';">'+
+      '<div class="tile-top"><div class="tile-name">'+escapeHtml(p.name||'Untitled project')+'</div>'+tag+'</div>'+
+      '<div class="stage-track" style="--track-fill:'+fillVar+';"><div class="segs">'+segs+'</div><div class="lbl" style="color:'+fillVar+';">'+escapeHtml(st.label)+'</div></div>'+
+      '<div class="tile-owner"><span class="dot"></span><span>'+escapeHtml(ownerName)+'</span></div>'+
+    '</button>';
+  }
+
+  function wireTiles(container){
+    Array.prototype.forEach.call(container.querySelectorAll('.tile'), function(tile){
+      tile.addEventListener('click', function(){
+        var id = tile.getAttribute('data-id');
+        var p = allProjects.find(function(x){return x.id===id;});
+        if (p) openModal(p, false);
+      });
+    });
+  }
+
+  function filteredProjects(){
+    var q = (els.searchInput.value||'').toLowerCase().trim();
+    if (!q) return allProjects;
+    return allProjects.filter(function(p){
+      var ownerName = p.ownerLabel || p.ownerEmail || '';
+      var hay = ((p.name||'')+' '+ownerName+' '+(p.people||'')+' '+(p.purpose||'')).toLowerCase();
+      return hay.indexOf(q)!==-1;
+    });
+  }
+
+  function renderContent(){
+    var list = filteredProjects();
+    els.countNote.textContent = list.length+' of '+allProjects.length+' project'+(allProjects.length===1?'':'s');
+    els.emptyState.style.display = allProjects.length===0 ? 'block' : 'none';
+    els.content.style.display = allProjects.length===0 ? 'none' : 'block';
+    renderKpis(allProjects);
+
+    if (list.length===0 && allProjects.length>0) { els.content.innerHTML = '<div class="empty-grid">No projects match your search.</div>'; return; }
+
+    if (viewMode==='grid') {
+      els.content.innerHTML = '<div class="tile-grid">'+list.map(tileHtml).join('')+'</div>';
+      wireTiles(els.content); return;
+    }
+
+    var groups = viewMode==='stage' ? STAGES : APPROVALS;
+    var keyName = viewMode==='stage' ? 'stage' : 'approval';
+    var html = groups.map(function(g){
+      var items = list.filter(function(p){ return (p[keyName] || (viewMode==='stage'?'idea':'none')) === g.key; });
+      if (viewMode==='approval' && g.key==='none' && items.length===0) return '';
+      var swatchColor = viewMode==='stage' ? toneVar(g.tone) : (g.c ? 'var(--'+g.c+')' : 'var(--line-strong)');
+      var body = items.length ? '<div class="tile-grid">'+items.map(tileHtml).join('')+'</div>' : '<div class="empty-col">Nothing here right now</div>';
+      return '<div class="section"><div class="section-head"><span class="swatch" style="background:'+swatchColor+';"></span><h3>'+escapeHtml(g.label)+'</h3><span class="desc">'+escapeHtml(g.desc)+'</span><span class="cnt num">'+items.length+'</span></div>'+body+'</div>';
+    }).join('');
+    els.content.innerHTML = html;
+    wireTiles(els.content);
+  }
+
+  function setView(v){
+    viewMode = v;
+    Array.prototype.forEach.call(els.viewSwitch.querySelectorAll('button'), function(b){ b.classList.toggle('active', b.getAttribute('data-view')===v); });
+    renderContent();
+  }
+  els.viewSwitch.addEventListener('click', function(e){ var b=e.target.closest('button[data-view]'); if(b) setView(b.getAttribute('data-view')); });
+  els.searchInput.addEventListener('input', renderContent);
+
+  function stageColor(o){ return toneVar(o.tone); }
+  function approvalColor(o){ return o.c ? 'var(--'+o.c+')' : 'var(--line-strong)'; }
+
+  function renderOptionGroup(container, options, selectedKey, name, onPick, colorFn){
+    container.innerHTML = options.map(function(o){
+      var checked = o.key===selectedKey ? ' checked' : '';
+      var sel = o.key===selectedKey ? ' selected' : '';
+      var sw = colorFn ? colorFn(o) : 'var(--line-strong)';
+      return '<label class="opt-row'+sel+'" data-key="'+o.key+'"><input type="radio" name="'+name+'" value="'+o.key+'"'+checked+'><span class="swatch" style="background:'+sw+';"></span><div><div class="ot">'+escapeHtml(o.label)+'</div><div class="od">'+escapeHtml(o.desc)+'</div></div></label>';
+    }).join('');
+    Array.prototype.forEach.call(container.querySelectorAll('.opt-row'), function(row){
+      row.addEventListener('click', function(){
+        var key = row.getAttribute('data-key');
+        Array.prototype.forEach.call(container.querySelectorAll('.opt-row'), function(r){ r.classList.remove('selected'); });
+        row.classList.add('selected');
+        onPick(key);
+      });
+    });
+  }
+
+  function renderViewMode(p){
+    var st = stageInfo(p.stage), ap = approvalInfo(p.approval);
+    var ownerName = p.ownerLabel || p.ownerEmail || 'Unassigned';
+    var people = peopleArray(p.people);
+    var html = '';
+    html += '<div class="view-block"><div class="k">Owner</div><div class="v">'+escapeHtml(ownerName)+'</div></div>';
+    if (p.purpose) html += '<div class="view-block"><div class="k">What it is</div><div class="v">'+escapeHtml(p.purpose)+'</div></div>';
+    html += '<div class="view-block"><div class="k">Stage</div><div class="v"><span class="tag neutral" style="color:'+toneVar(st.tone)+';border-color:'+toneVar(st.tone)+';background:transparent;">'+escapeHtml(st.label)+'</span><div style="font-size:12px;color:var(--muted);margin-top:6px;">'+escapeHtml(st.desc)+'</div></div></div>';
+    html += '<div class="view-block"><div class="k">Stakeholder action needed</div><div class="v">'+(ap.c ? '<span class="tag '+ap.c+'">'+escapeHtml(ap.label)+'</span>' : escapeHtml(ap.label))+'<div style="font-size:12px;color:var(--muted);margin-top:6px;">'+escapeHtml(ap.desc)+'</div></div></div>';
+    if (people.length) html += '<div class="view-block"><div class="k">People involved</div><div class="v">'+escapeHtml(people.join(', '))+'</div></div>';
+    els.viewMode.innerHTML = html;
+  }
+
+  function openModal(p, isNew){
+    if (!currentUser) { doSignIn(); return; }
+    creatingNew = !!isNew;
+    editingId = p ? p.id : null;
+
+    if (isNew) {
+      if (!isAdmin) return;
+      els.modalTitle.textContent = 'New project';
+      els.modalSub.textContent = "Name it, give it an owner label, and optionally their email so they can edit it.";
+      els.viewMode.style.display='none'; els.projectForm.style.display='block';
+      els.ownerAssignField.style.display='block'; els.deleteBtn.style.display='none';
+      els.f_name.value=''; els.f_ownerLabel.value=''; els.ownerEmailInput.value=''; els.f_purpose.value=''; els.f_people.value='';
+      formStage='idea'; formApproval='none';
+      renderOptionGroup(els.stageOptions, STAGES, formStage, 'stage', function(k){formStage=k;}, stageColor);
+      renderOptionGroup(els.approvalOptions, APPROVALS, formApproval, 'approval', function(k){formApproval=k;}, approvalColor);
+      els.overlay.classList.add('open');
+      setTimeout(function(){ els.f_name.focus(); }, 30);
+      return;
+    }
+
+    var editable = canEditProject(p);
+    els.modalTitle.textContent = p.name || 'Untitled project';
+    els.modalSub.textContent = editable ? 'You can edit this project.' : 'View only — only the assigned owner or an admin can edit this.';
+    els.ownerAssignField.style.display = isAdmin ? 'block' : 'none';
+
+    if (editable) {
+      els.viewMode.style.display='none'; els.projectForm.style.display='block';
+      els.deleteBtn.style.display = isAdmin ? 'inline-block' : 'none';
+      els.f_name.value=p.name||''; els.f_ownerLabel.value=p.ownerLabel||''; els.ownerEmailInput.value=p.ownerEmail||'';
+      els.f_purpose.value=p.purpose||''; els.f_people.value=p.people||'';
+      formStage=p.stage||'idea'; formApproval=p.approval||'none';
+      renderOptionGroup(els.stageOptions, STAGES, formStage, 'stage', function(k){formStage=k;}, stageColor);
+      renderOptionGroup(els.approvalOptions, APPROVALS, formApproval, 'approval', function(k){formApproval=k;}, approvalColor);
+    } else {
+      els.projectForm.style.display='none'; els.viewMode.style.display='block';
+      renderViewMode(p);
+    }
+    els.overlay.classList.add('open');
+  }
+  function closeModal(){ els.overlay.classList.remove('open'); editingId=null; creatingNew=false; }
+  els.closeX.addEventListener('click', closeModal);
+  els.cancelBtn.addEventListener('click', closeModal);
+  els.overlay.addEventListener('click', function(e){ if(e.target===els.overlay) closeModal(); });
+  els.addBtn.addEventListener('click', function(){ openModal(null, true); });
+
+  els.projectForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    var baseFields = {
+      name: els.f_name.value.trim(),
+      ownerLabel: els.f_ownerLabel.value.trim(),
+      ownerEmail: els.ownerEmailInput.value.trim().toLowerCase() || null,
+      purpose: els.f_purpose.value.trim(),
+      stage: formStage,
+      approval: formApproval,
+      people: els.f_people.value.trim(),
+      updatedAt: serverTimestamp()
+    };
+    els.saveBtn.disabled = true;
+    var col = collection(dbf, 'projects');
+    var op;
+    if (creatingNew) {
+      op = addDoc(col, Object.assign({}, baseFields, { createdAt: serverTimestamp() }));
+    } else {
+      op = updateDoc(doc(dbf, 'projects', editingId), baseFields);
+    }
+    op.then(function(){ els.saveBtn.disabled=false; closeModal(); })
+      .catch(function(err){ els.saveBtn.disabled=false; alert('Could not save: '+(err&&err.message?err.message:'unknown error')); });
+  });
+
+  els.deleteBtn.addEventListener('click', function(){
+    if (!editingId) return;
+    if (!confirm('Delete this project? This cannot be undone.')) return;
+    deleteDoc(doc(dbf, 'projects', editingId)).then(closeModal).catch(function(err){
+      alert('Could not delete: '+(err&&err.message?err.message:'unknown error'));
+    });
+  });
+
+  function subscribe(){
+    onSnapshot(collection(dbf, 'projects'), function(snap){
+      allProjects = snap.docs.map(function(d){ var data=Object.assign({},d.data()); data.id=d.id; return data; })
+        .sort(function(a,b){ return (b.updatedAt&&b.updatedAt.toMillis?b.updatedAt.toMillis():0) - (a.updatedAt&&a.updatedAt.toMillis?a.updatedAt.toMillis():0); });
+      renderContent();
+    }, function(err){
+      console.error('Firestore subscription error', err);
+      els.content.innerHTML = '<div class="empty-grid">Live sync unavailable — check your Firestore rules and config.</div>';
+    });
+  }
+
+  function doSignIn(){
+    var provider = new GoogleAuthProvider();
+    signInWithPopup(auth, provider).catch(function(err){ alert('Sign-in failed: '+(err&&err.message?err.message:'unknown error')); });
+  }
+  els.signInBtn.addEventListener('click', doSignIn);
+  els.signOutBtn.addEventListener('click', function(){ signOut(auth); });
+
+  function renderWho(){
+    els.whoBox.innerHTML = '';
+    if (!currentUser) {
+      els.whoLabel.textContent = 'Viewing';
+      els.whoBox.appendChild(els.whoLabel);
+      els.signInBtn.style.display = 'inline-block';
+      els.signOutBtn.style.display = 'none';
+      els.addBtn.style.display = 'none';
+      els.roBanner.style.display = 'block';
+      els.roBanner.textContent = "You're viewing without signing in. Sign in with Google if you're a project owner or admin so you can edit.";
+      return;
+    }
+    var img = document.createElement('img'); img.src = currentUser.avatarUrl || '';
+    var span = document.createElement('span'); span.textContent = currentUser.name || currentUser.email;
+    els.whoBox.appendChild(img); els.whoBox.appendChild(span);
+    if (isAdmin) {
+      var tag = document.createElement('span'); tag.className='role-tag'; tag.textContent='Admin';
+      els.whoBox.appendChild(tag);
+    }
+    els.signInBtn.style.display = 'none';
+    els.signOutBtn.style.display = 'inline-block';
+    els.addBtn.style.display = isAdmin ? 'inline-block' : 'none';
+    if (!isAdmin) {
+      els.roBanner.style.display = 'block';
+      els.roBanner.textContent = "You can view every project here. If you're an owner on one, open its card to fill in or update the details — everyone else sees it update live.";
+    } else {
+      els.roBanner.style.display = 'none';
+    }
+  }
+
+  onAuthStateChanged(auth, function(user){
+    if (user) {
+      currentUser = { uid: user.uid, email: (user.email||'').toLowerCase(), name: user.displayName, avatarUrl: user.photoURL };
+      isAdmin = ADMIN_EMAILS.map(function(e){return e.toLowerCase();}).indexOf(currentUser.email) !== -1;
+    } else {
+      currentUser = null; isAdmin = false;
+    }
+    renderWho();
+    renderContent();
+  });
+
+  renderContent();
+  subscribe();
+})();
+</script>
+</body>
+</html>
