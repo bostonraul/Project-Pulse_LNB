@@ -1,10 +1,31 @@
 # Project Pulse — self-hosted setup
 
-This gives you the same dashboard, but running entirely on infrastructure you
-own — your own database, your own domain, no Claude branding anywhere. It
-uses Firebase (Google's backend-as-a-service): a permanent free tier, no
-server for you to manage, and it works no matter where you host the HTML
-file itself.
+This dashboard is public to view. Only `rsivarajan1234@gmail.com` can create,
+edit, or delete projects (unless you later assign a project owner email).
+
+## Quick local start (no Firebase account required)
+
+You need Node.js 18+ (already used by this repo). Then:
+
+```
+npm install
+npm start
+```
+
+Open http://localhost:3000 — anyone with that link can view the board.
+Sign in as **rsivarajan1234@gmail.com** to create and edit data.
+
+To host it on your own domain later, follow the Firebase steps below and
+paste a real `firebaseConfig` into `index.html`. Until that config is
+pasted, the app uses the local server and `data/projects.json`.
+
+---
+
+## Firebase hosting (optional, for a public internet URL)
+
+This gives you the same dashboard on infrastructure you own — your own
+database, your own domain. It uses Firebase (Google's backend-as-a-service):
+a permanent free tier, no server for you to manage.
 
 Total time: about 15–20 minutes, no coding required beyond copy/paste.
 

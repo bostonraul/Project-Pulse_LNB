@@ -264,8 +264,10 @@ const firebaseConfig = {
 //    firestore.rules, which you must edit to match this same list.
 // =====================================================================
 const ADMIN_EMAILS = [
-  "you@yourcompany.com"
+  "rsivarajan1234@gmail.com"
 ];
+
+const USE_FIREBASE = !!(firebaseConfig.apiKey && firebaseConfig.apiKey.indexOf("PASTE_") !== 0);
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
@@ -276,9 +278,10 @@ import {
   onSnapshot, serverTimestamp, deleteField
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const dbf = getFirestore(app);
+const app = USE_FIREBASE ? initializeApp(firebaseConfig) : null;
+const auth = USE_FIREBASE ? getAuth(app) : null;
+const dbf = USE_FIREBASE ? getFirestore(app) : null;
+const LOCAL_TOKEN_KEY = "pp_local_token";
 
 (function(){
   "use strict";
@@ -317,6 +320,27 @@ const dbf = getFirestore(app);
 
   function escapeHtml(str){ var d=document.createElement('div'); d.textContent = str==null?'':String(str); return d.innerHTML; }
   function peopleArray(str){ if(!str) return []; return str.split(',').map(function(s){return s.trim();}).filter(Boolean); }
+  function projectStamp(p){
+    if (p && p.updatedAt && typeof p.updatedAt.toMillis === 'function') return p.updatedAt.toMillis();
+    if (p && typeof p.updatedAt === 'string') return Date.parse(p.updatedAt) || 0;
+    return 0;
+  }
+  function localHeaders(){
+    var headers = { 'Content-Type': 'application/json' };
+    var token = localStorage.getItem(LOCAL_TOKEN_KEY);
+    if (token) headers.Authorization = 'Bearer ' + token;
+    return headers;
+  }
+  function applySession(user, adminFlag){
+    if (user) {
+      currentUser = { uid: user.uid, email: (user.email||'').toLowerCase(), name: user.name || user.displayName, avatarUrl: user.avatarUrl || user.photoURL || '' };
+      isAdmin = !!adminFlag;
+    } else {
+      currentUser = null; isAdmin = false;
+    }
+    renderWho();
+    renderContent();
+  }
   function canEditProject(p){
     if (isAdmin) return true;
     if (!currentUser) return false;
@@ -448,11 +472,11 @@ const dbf = getFirestore(app);
   }
 
   function openModal(p, isNew){
-    if (!currentUser) { doSignIn(); return; }
     creatingNew = !!isNew;
     editingId = p ? p.id : null;
 
     if (isNew) {
+      if (!currentUser) { doSignIn(); return; }
       if (!isAdmin) return;
       els.modalTitle.textContent = 'New project';
       els.modalSub.textContent = "Name it, give it an owner label, and optionally their email so they can edit it.";
@@ -502,15 +526,28 @@ const dbf = getFirestore(app);
       stage: formStage,
       approval: formApproval,
       people: els.f_people.value.trim(),
-      updatedAt: serverTimestamp()
+      updatedAt: USE_FIREBASE ? serverTimestamp() : new Date().toISOString()
     };
     els.saveBtn.disabled = true;
-    var col = collection(dbf, 'projects');
     var op;
-    if (creatingNew) {
-      op = addDoc(col, Object.assign({}, baseFields, { createdAt: serverTimestamp() }));
+    if (!USE_FIREBASE) {
+      var url = creatingNew ? '/api/projects' : '/api/projects/' + encodeURIComponent(editingId);
+      op = fetch(url, {
+        method: creatingNew ? 'POST' : 'PATCH',
+        headers: localHeaders(),
+        body: JSON.stringify(baseFields)
+      }).then(function(res){
+        return res.json().then(function(body){
+          if (!res.ok) throw new Error(body && body.error ? body.error : 'Could not save');
+        });
+      }).then(function(){ return refreshLocalProjects(); });
     } else {
-      op = updateDoc(doc(dbf, 'projects', editingId), baseFields);
+      var col = collection(dbf, 'projects');
+      if (creatingNew) {
+        op = addDoc(col, Object.assign({}, baseFields, { createdAt: serverTimestamp() }));
+      } else {
+        op = updateDoc(doc(dbf, 'projects', editingId), baseFields);
+      }
     }
     op.then(function(){ els.saveBtn.disabled=false; closeModal(); })
       .catch(function(err){ els.saveBtn.disabled=false; alert('Could not save: '+(err&&err.message?err.message:'unknown error')); });
@@ -519,28 +556,96 @@ const dbf = getFirestore(app);
   els.deleteBtn.addEventListener('click', function(){
     if (!editingId) return;
     if (!confirm('Delete this project? This cannot be undone.')) return;
-    deleteDoc(doc(dbf, 'projects', editingId)).then(closeModal).catch(function(err){
+    var delOp = USE_FIREBASE
+      ? deleteDoc(doc(dbf, 'projects', editingId))
+      : fetch('/api/projects/' + encodeURIComponent(editingId), { method: 'DELETE', headers: localHeaders() })
+          .then(function(res){
+            return res.json().then(function(body){
+              if (!res.ok) throw new Error(body && body.error ? body.error : 'Could not delete');
+            });
+          }).then(function(){ return refreshLocalProjects(); });
+    delOp.then(closeModal).catch(function(err){
       alert('Could not delete: '+(err&&err.message?err.message:'unknown error'));
     });
   });
 
+  function applyProjectList(list){
+    allProjects = (list || []).slice().sort(function(a,b){ return projectStamp(b) - projectStamp(a); });
+    renderContent();
+  }
+
+  function refreshLocalProjects(){
+    return fetch('/api/projects').then(function(res){
+      if (!res.ok) throw new Error('Could not load projects');
+      return res.json();
+    }).then(applyProjectList);
+  }
+
   function subscribe(){
+    if (!USE_FIREBASE) {
+      refreshLocalProjects().catch(function(err){
+        console.error('Local project load error', err);
+        els.content.innerHTML = '<div class="empty-grid">Could not load projects from the local server.</div>';
+      });
+      setInterval(function(){ refreshLocalProjects().catch(function(){}); }, 4000);
+      return;
+    }
     onSnapshot(collection(dbf, 'projects'), function(snap){
-      allProjects = snap.docs.map(function(d){ var data=Object.assign({},d.data()); data.id=d.id; return data; })
-        .sort(function(a,b){ return (b.updatedAt&&b.updatedAt.toMillis?b.updatedAt.toMillis():0) - (a.updatedAt&&a.updatedAt.toMillis?a.updatedAt.toMillis():0); });
-      renderContent();
+      applyProjectList(snap.docs.map(function(d){ var data=Object.assign({},d.data()); data.id=d.id; return data; }));
     }, function(err){
       console.error('Firestore subscription error', err);
       els.content.innerHTML = '<div class="empty-grid">Live sync unavailable — check your Firestore rules and config.</div>';
     });
   }
 
+  function finishLocalSignIn(email){
+    fetch('/api/auth/signin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email })
+    }).then(function(res){
+      return res.json().then(function(body){
+        if (!res.ok) throw new Error(body && body.error ? body.error : 'Sign-in failed');
+        return body;
+      });
+    }).then(function(body){
+      localStorage.setItem(LOCAL_TOKEN_KEY, body.token);
+      closeModal();
+      applySession(body.user, body.isAdmin);
+    }).catch(function(err){
+      alert('Sign-in failed: '+(err&&err.message?err.message:'unknown error'));
+    });
+  }
+
   function doSignIn(){
+    if (!USE_FIREBASE) {
+      els.modalTitle.textContent = 'Sign in';
+      els.modalSub.textContent = 'Use your Google email. The admin account can create and edit every project.';
+      els.viewMode.style.display = 'block';
+      els.projectForm.style.display = 'none';
+      els.viewMode.innerHTML = '<div class="field"><label>Email</label><input type="email" id="localSignInEmail" placeholder="rsivarajan1234@gmail.com" /></div><div class="modal-actions"><div class="left"></div><div class="right"><button type="button" id="localSignInCancel">Cancel</button><button type="button" class="primary" id="localSignInGo">Sign in</button></div></div>';
+      els.overlay.classList.add('open');
+      var emailInput = document.getElementById('localSignInEmail');
+      var go = function(){ finishLocalSignIn((emailInput.value||'').trim()); };
+      document.getElementById('localSignInCancel').addEventListener('click', closeModal);
+      document.getElementById('localSignInGo').addEventListener('click', go);
+      emailInput.addEventListener('keydown', function(ev){ if (ev.key === 'Enter') { ev.preventDefault(); go(); } });
+      setTimeout(function(){ emailInput.focus(); }, 30);
+      return;
+    }
     var provider = new GoogleAuthProvider();
     signInWithPopup(auth, provider).catch(function(err){ alert('Sign-in failed: '+(err&&err.message?err.message:'unknown error')); });
   }
   els.signInBtn.addEventListener('click', doSignIn);
-  els.signOutBtn.addEventListener('click', function(){ signOut(auth); });
+  els.signOutBtn.addEventListener('click', function(){
+    if (!USE_FIREBASE) {
+      fetch('/api/auth/signout', { method: 'POST', headers: localHeaders() }).catch(function(){});
+      localStorage.removeItem(LOCAL_TOKEN_KEY);
+      applySession(null, false);
+      return;
+    }
+    signOut(auth);
+  });
 
   function renderWho(){
     els.whoBox.innerHTML = '';
@@ -551,12 +656,17 @@ const dbf = getFirestore(app);
       els.signOutBtn.style.display = 'none';
       els.addBtn.style.display = 'none';
       els.roBanner.style.display = 'block';
-      els.roBanner.textContent = "You're viewing without signing in. Sign in with Google if you're a project owner or admin so you can edit.";
+      els.roBanner.textContent = USE_FIREBASE
+        ? "You're viewing without signing in. Sign in with Google if you're a project owner or admin so you can edit."
+        : "You're viewing without signing in. Sign in as rsivarajan1234@gmail.com to create and edit projects.";
       return;
     }
-    var img = document.createElement('img'); img.src = currentUser.avatarUrl || '';
+    if (currentUser.avatarUrl) {
+      var img = document.createElement('img'); img.src = currentUser.avatarUrl;
+      els.whoBox.appendChild(img);
+    }
     var span = document.createElement('span'); span.textContent = currentUser.name || currentUser.email;
-    els.whoBox.appendChild(img); els.whoBox.appendChild(span);
+    els.whoBox.appendChild(span);
     if (isAdmin) {
       var tag = document.createElement('span'); tag.className='role-tag'; tag.textContent='Admin';
       els.whoBox.appendChild(tag);
@@ -572,16 +682,25 @@ const dbf = getFirestore(app);
     }
   }
 
-  onAuthStateChanged(auth, function(user){
-    if (user) {
-      currentUser = { uid: user.uid, email: (user.email||'').toLowerCase(), name: user.displayName, avatarUrl: user.photoURL };
-      isAdmin = ADMIN_EMAILS.map(function(e){return e.toLowerCase();}).indexOf(currentUser.email) !== -1;
+  if (USE_FIREBASE) {
+    onAuthStateChanged(auth, function(user){
+      if (user) {
+        applySession({ uid: user.uid, email: (user.email||'').toLowerCase(), name: user.displayName, avatarUrl: user.photoURL }, ADMIN_EMAILS.map(function(e){return e.toLowerCase();}).indexOf((user.email||'').toLowerCase()) !== -1);
+      } else {
+        applySession(null, false);
+      }
+    });
+  } else {
+    els.signInBtn.textContent = 'Sign in';
+    var existing = localStorage.getItem(LOCAL_TOKEN_KEY);
+    if (existing) {
+      fetch('/api/me', { headers: localHeaders() }).then(function(res){ return res.json(); }).then(function(body){
+        applySession(body.user, body.isAdmin);
+      }).catch(function(){ applySession(null, false); });
     } else {
-      currentUser = null; isAdmin = false;
+      applySession(null, false);
     }
-    renderWho();
-    renderContent();
-  });
+  }
 
   renderContent();
   subscribe();
